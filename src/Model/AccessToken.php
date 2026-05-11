@@ -6,25 +6,24 @@ namespace PinVandaag\BuckarooAPI\Model;
 
 final readonly class AccessToken
 {
-    public function __construct(
-        public string $accessToken,
-        public string $tokenType,
-        public int $expiresIn,
-        public int $createdAt,
-    ) {
-    }
+    public string $accessToken;
 
-    /**
-     * @param array{access_token:string, token_type?:string, expires_in?:int|string} $payload
-     */
-    public static function fromArray(array $payload): self
-    {
-        return new self(
-            accessToken: $payload['access_token'],
-            tokenType: (string) ($payload['token_type'] ?? 'Bearer'),
-            expiresIn: (int) ($payload['expires_in'] ?? 0),
-            createdAt: time(),
-        );
+    public string $tokenType;
+
+    public int $expiresIn;
+
+    public int $createdAt;
+
+    public function __construct(
+        string $accessToken,
+        string $tokenType = 'Bearer',
+        int|string $expiresIn = 0,
+        int $createdAt = 0,
+    ) {
+        $this->accessToken = $accessToken;
+        $this->tokenType = $tokenType;
+        $this->expiresIn = (int) $expiresIn;
+        $this->createdAt = $createdAt > 0 ? $createdAt : time();
     }
 
     public function authorizationHeader(): string

@@ -12,15 +12,28 @@ use PinVandaag\BuckarooAPI\Exception\BuckarooAPIException;
 use PinVandaag\BuckarooAPI\Model\AccessToken;
 use Psr\Log\LoggerAwareTrait;
 use SensitiveParameter;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Exception\ExceptionInterface as SerializerException;
+use Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 final class APIClient
 {
     use LoggerAwareTrait;
 
+    private readonly SerializerInterface $serializer;
+
     public function __construct(
         private readonly ClientInterface $client,
         private string $baseUri = '',
+        ?SerializerInterface $serializer = null,
     ) {
+        $this->serializer = $serializer ?? new Serializer(
+            [new ObjectNormalizer(nameConverter: new CamelCaseToSnakeCaseNameConverter())],
+            [new JsonEncoder()],
+        );
     }
 
     public function setBaseUri(string $baseUri): self
@@ -88,14 +101,70 @@ final class APIClient
             );
         }
 
-        /** @var mixed $decoded */
-        $decoded = json_decode($body, true);
+        try {
+            /** @var AccessToken $accessToken */
+            $accessToken = $this->serializer->deserialize($body, AccessToken::class, 'json');
+        } catch (SerializerException $exception) {
+            throw new BuckarooAPIException('Could not deserialize Buckaroo OAuth token response.', 0, $exception);
+        }
 
-        if (! is_array($decoded) || ! isset($decoded['access_token']) || ! is_string($decoded['access_token'])) {
+        if ($accessToken->accessToken === '') {
             throw new BuckarooAPIException('Buckaroo OAuth token response did not contain an access_token.');
         }
 
-        return AccessToken::fromArray($decoded);
+        return $accessToken;
+    }
+
+    /**
+     * Create a long-lived Buckaroo API key using an OAuth access token.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function createApiKey(
+        AccessToken|string $accessToken,
+        string $name,
+        string|array $scopes,
+    ): ApiKey {
+        $scopeString = is_array($scopes) ? implode(' ', $scopes) : $scopes;
+
+        $payload = [
+            'name' => $name,
+            'scopes' => $scopeString,
+        ];
+
+        try {
+            $response = $this->client->request(
+                'POST',
+                $this->uri('/v1/apikeys'),
+                [
+                    'headers' => [
+                        'Authorization' => is_string($accessToken)
+                            ? 'Bearer ' . $accessToken
+                            : $accessToken->authorizationHeader(),
+                        'Accept' => 'application/json',
+                        'Content-Type' => 'application/json',
+                    ],
+                    'body' => $this->serializer->serialize($payload, 'json'),
+                ],
+            );
+        } catch (Throwable $exception) {
+            throw new BuckarooAPIException('Could not create Buckaroo API key.', 0, $exception);
+        }
+
+        $body = (string) $response->getBody();
+
+        try {
+            /** @var ApiKey $apiKey */
+            $apiKey = $this->serializer->deserialize($body, ApiKey::class, 'json');
+        } catch (SerializerException $exception) {
+            throw new BuckarooAPIException('Could not deserialize Buckaroo API key response.', 0, $exception);
+        }
+
+        if ($apiKey->key === '') {
+            throw new BuckarooAPIException('Buckaroo API key response did not contain a key.');
+        }
+
+        return $apiKey;
     }
 
     private function uri(string $path): string

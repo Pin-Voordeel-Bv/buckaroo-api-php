@@ -54,4 +54,15 @@ final class BuckarooAPIClient
 
         return $this->apiClient->retrieveAccessToken($this->clientId, $this->clientSecret, $scope);
     }
+
+    /**
+     * Create a long-lived API key with the given OAuth access token.
+     */
+    public function createApiKey(
+        AccessToken|string $accessToken,
+        string $name,
+        string|array $scopes,
+    ): ApiKey {
+        return $this->apiClient->createApiKey($accessToken, $name, $scopes);
+    }
 }
