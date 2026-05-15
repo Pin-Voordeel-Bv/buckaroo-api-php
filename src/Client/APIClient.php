@@ -194,7 +194,7 @@ final class APIClient
                 $this->uri('/v1/sales/transactions/search'),
                 [
                     'headers' => [
-                        'X-API-KEY' => $apiKey,
+                        'Buck-Api-Key' => $apiKey,
                         'Accept' => 'application/hal+json',
                         'Content-Type' => 'application/json',
                     ],
