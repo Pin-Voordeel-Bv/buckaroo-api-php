@@ -182,36 +182,14 @@ final class APIClient
         string $accessToken,
         array $filters = [],
     ): CustomerSearchResult {
-        $payload = array_filter(
-            $filters,
-            static fn (mixed $value): bool => $value !== null && $value !== []
+        /** @var CustomerSearchResult $result */
+        $result = $this->postHalSearch(
+            endpoint: '/v1/customers/search',
+            accessToken: $accessToken,
+            filters: $filters,
+            responseClass: CustomerSearchResult::class,
+            actionDescription: 'search Buckaroo customers',
         );
-
-        try {
-            $response = $this->client->request(
-                'POST',
-                $this->uri('/v1/customers/search'),
-                [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . $accessToken,
-                        'Accept' => 'application/hal+json',
-                        'Content-Type' => 'application/json',
-                    ],
-                    'body' => $this->serializer->serialize($payload, 'json'),
-                ],
-            );
-        } catch (Throwable $exception) {
-            throw new BuckarooAPIException('Could not search Buckaroo customers.', 0, $exception);
-        }
-
-        $body = (string) $response->getBody();
-
-        try {
-            /** @var CustomerSearchResult $result */
-            $result = $this->serializer->deserialize($body, CustomerSearchResult::class, 'json');
-        } catch (SerializerException $exception) {
-            throw new BuckarooAPIException('Could not deserialize Buckaroo customer search response.', 0, $exception);
-        }
 
         return $result;
     }
@@ -227,19 +205,43 @@ final class APIClient
         string $accessToken,
         array $filters = [],
     ): TransactionSearchResult {
-        $payload = array_filter(
-            $filters,
-            static fn (mixed $value): bool => $value !== null && $value !== []
+        $filters['limit'] ??= 100;
+
+        /** @var TransactionSearchResult $result */
+        $result = $this->postHalSearch(
+            endpoint: '/v1/sales/transactions/search',
+            accessToken: $accessToken,
+            filters: $filters,
+            responseClass: TransactionSearchResult::class,
+            actionDescription: 'search Buckaroo transactions',
         );
 
-        if (! isset($payload['limit'])) {
-            $payload['limit'] = 100;
-        }
+        return $result;
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param array<string, mixed> $filters
+     * @param class-string<T> $responseClass
+     *
+     * @return T
+     *
+     * @throws BuckarooAPIException
+     */
+    private function postHalSearch(
+        string $endpoint,
+        string $accessToken,
+        array $filters,
+        string $responseClass,
+        string $actionDescription,
+    ): object {
+        $payload = $this->filterPayload($filters);
 
         try {
             $response = $this->client->request(
                 'POST',
-                $this->uri('/v1/sales/transactions/search'),
+                $this->uri($endpoint),
                 [
                     'headers' => [
                         'Authorization' => 'Bearer ' . $accessToken,
@@ -250,19 +252,35 @@ final class APIClient
                 ],
             );
         } catch (Throwable $exception) {
-            throw new BuckarooAPIException('Could not search Buckaroo transactions.', 0, $exception);
+            throw new BuckarooAPIException(sprintf('Could not %s.', $actionDescription), 0, $exception);
         }
 
         $body = (string) $response->getBody();
 
         try {
-            /** @var TransactionSearchResult $result */
-            $result = $this->serializer->deserialize($body, TransactionSearchResult::class, 'json');
+            /** @var T $result */
+            $result = $this->serializer->deserialize($body, $responseClass, 'json');
         } catch (SerializerException $exception) {
-            throw new BuckarooAPIException('Could not deserialize Buckaroo transaction search response.', 0, $exception);
+            throw new BuckarooAPIException(
+                sprintf('Could not deserialize Buckaroo response for %s.', $actionDescription),
+                0,
+                $exception
+            );
         }
 
         return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function filterPayload(array $payload): array
+    {
+        return array_filter(
+            $payload,
+            static fn (mixed $value): bool => $value !== null && $value !== []
+        );
     }
 
     private function uri(string $path): string
