@@ -16,6 +16,8 @@ use PinVandaag\BuckarooAPI\Model\CustomerSearchResult;
 use PinVandaag\BuckarooAPI\Model\Merchant;
 use PinVandaag\BuckarooAPI\Model\MerchantFeatures;
 use PinVandaag\BuckarooAPI\Model\MerchantLegalEntity;
+use PinVandaag\BuckarooAPI\Model\Store;
+use PinVandaag\BuckarooAPI\Model\StoreSearchResult;
 use PinVandaag\BuckarooAPI\Model\TransactionSearchResult;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Http\Message\ResponseInterface;
@@ -371,6 +373,117 @@ final class APIClient
         );
 
         return $result;
+    }
+
+    /**
+     * Get stores.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getStores(
+        string $accessToken,
+        ?string $status = null,
+        ?string $continuationToken = null,
+    ): StoreSearchResult {
+        /** @var StoreSearchResult $stores */
+        $stores = $this->getHal(
+            endpoint: '/v1/stores',
+            accessToken: $accessToken,
+            responseClass: StoreSearchResult::class,
+            actionDescription: 'get Buckaroo stores',
+            query: [
+                'status' => $status,
+                'continuationToken' => $continuationToken,
+            ],
+        );
+
+        return $stores;
+    }
+
+    /**
+     * Add a new store.
+     *
+     * @param array<string, mixed> $store
+     *
+     * @throws BuckarooAPIException
+     */
+    public function createStore(
+        string $accessToken,
+        array $store,
+    ): Store {
+        $payload = $this->filterPayload($store);
+
+        if (($payload['type'] ?? null) === null || $payload['type'] === '') {
+            throw new BuckarooAPIException('Buckaroo store payload requires a type.');
+        }
+
+        if (($payload['name'] ?? null) === null || $payload['name'] === '') {
+            throw new BuckarooAPIException('Buckaroo store payload requires a name.');
+        }
+
+        /** @var Store $createdStore */
+        $createdStore = $this->postHalSearch(
+            endpoint: '/v1/stores',
+            accessToken: $accessToken,
+            filters: $payload,
+            responseClass: Store::class,
+            actionDescription: 'create Buckaroo store',
+        );
+
+        return $createdStore;
+    }
+
+    /**
+     * Search stores.
+     *
+     * @param array<string, mixed> $filters
+     *
+     * @throws BuckarooAPIException
+     */
+    public function searchStores(
+        string $accessToken,
+        array $filters = [],
+    ): StoreSearchResult {
+        /** @var StoreSearchResult $stores */
+        $stores = $this->postHalSearch(
+            endpoint: '/v1/stores/search',
+            accessToken: $accessToken,
+            filters: $filters,
+            responseClass: StoreSearchResult::class,
+            actionDescription: 'search Buckaroo stores',
+        );
+
+        return $stores;
+    }
+
+    /**
+     * Update a store.
+     *
+     * @param array<string, mixed> $store
+     *
+     * @throws BuckarooAPIException
+     */
+    public function updateStore(
+        string $accessToken,
+        string $storeId,
+        array $store,
+    ): Store {
+        $payload = $this->filterPayload($store);
+
+        if ($storeId === '') {
+            throw new BuckarooAPIException('Buckaroo store update requires a storeId.');
+        }
+
+        /** @var Store $updatedStore */
+        $updatedStore = $this->patchHal(
+            endpoint: sprintf('/v1/stores/%s', rawurlencode($storeId)),
+            accessToken: $accessToken,
+            payload: $payload,
+            responseClass: Store::class,
+            actionDescription: sprintf('update Buckaroo store "%s"', $storeId),
+        );
+
+        return $updatedStore;
     }
 
     /**

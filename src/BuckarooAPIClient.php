@@ -13,6 +13,8 @@ use PinVandaag\BuckarooAPI\Model\CustomerSearchResult;
 use PinVandaag\BuckarooAPI\Model\Merchant;
 use PinVandaag\BuckarooAPI\Model\MerchantFeatures;
 use PinVandaag\BuckarooAPI\Model\MerchantLegalEntity;
+use PinVandaag\BuckarooAPI\Model\Store;
+use PinVandaag\BuckarooAPI\Model\StoreSearchResult;
 use PinVandaag\BuckarooAPI\Model\TransactionSearchResult;
 use Psr\Log\LoggerInterface;
 use SensitiveParameter;
@@ -165,5 +167,53 @@ final class BuckarooAPIClient
         array $filters = [],
     ): TransactionSearchResult {
         return $this->apiClient->searchTransactions($accessToken, $filters);
+    }
+
+    /**
+     * Get stores.
+     */
+    public function getStores(
+        string $accessToken,
+        ?string $status = null,
+        ?string $continuationToken = null,
+    ): StoreSearchResult {
+        return $this->apiClient->getStores($accessToken, $status, $continuationToken);
+    }
+ 
+    /**
+     * Search stores.
+     *
+     * @param array<string, mixed> $filters
+     */
+    public function searchStores(
+        string $accessToken,
+        array $filters = [],
+    ): StoreSearchResult {
+        return $this->apiClient->searchStores($accessToken, $filters);
+    }
+
+    /**
+     * Add a new store.
+     *
+     * @param array<string, mixed> $store
+     */
+    public function createStore(
+        string $accessToken,
+        array $store,
+    ): Store {
+        return $this->apiClient->createStore($accessToken, $store);
+    }
+ 
+    /**
+     * Update a store.
+     *
+     * @param array<string, mixed> $store
+     */
+    public function updateStore(
+        string $accessToken,
+        string $storeId,
+        array $store,
+    ): Store {
+        return $this->apiClient->updateStore($accessToken, $storeId, $store);
     }
 }
