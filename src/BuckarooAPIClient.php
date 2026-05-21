@@ -10,11 +10,17 @@ use PinVandaag\BuckarooAPI\Model\AccessToken;
 use PinVandaag\BuckarooAPI\Model\ApiKey;
 use PinVandaag\BuckarooAPI\Model\Customer;
 use PinVandaag\BuckarooAPI\Model\CustomerSearchResult;
+use PinVandaag\BuckarooAPI\Model\InternalTerminal;
+use PinVandaag\BuckarooAPI\Model\InternalTerminalConnectionStatus;
 use PinVandaag\BuckarooAPI\Model\Merchant;
 use PinVandaag\BuckarooAPI\Model\MerchantFeatures;
 use PinVandaag\BuckarooAPI\Model\MerchantLegalEntity;
 use PinVandaag\BuckarooAPI\Model\Store;
 use PinVandaag\BuckarooAPI\Model\StoreSearchResult;
+use PinVandaag\BuckarooAPI\Model\SmartTerminal;
+use PinVandaag\BuckarooAPI\Model\SmartTerminalConnectionStatus;
+use PinVandaag\BuckarooAPI\Model\SmartTerminalMdmSettings;
+use PinVandaag\BuckarooAPI\Model\TerminalSearchResult;
 use PinVandaag\BuckarooAPI\Model\TransactionSearchResult;
 use Psr\Log\LoggerInterface;
 use SensitiveParameter;
@@ -155,6 +161,137 @@ final class BuckarooAPIClient
         string $accessToken,
     ): MerchantLegalEntity {
         return $this->apiClient->getMerchantLegalEntity($accessToken);
+    }
+
+    /**
+     * Search filtered POS terminals.
+     *
+     * @param array<string, mixed> $filters
+     */
+    public function searchTerminals(
+        string $accessToken,
+        array $filters = [],
+    ): TerminalSearchResult {
+        return $this->apiClient->searchTerminals($accessToken, $filters);
+    }
+
+    /**
+     * Get an existing smart terminal.
+     */
+    public function getSmartTerminal(
+        string $accessToken,
+        string $terminalId,
+    ): SmartTerminal {
+        return $this->apiClient->getSmartTerminal($accessToken, $terminalId);
+    }
+
+    /**
+     * Update an existing smart terminal.
+     *
+     * @param array<string, mixed> $terminal
+     */
+    public function updateSmartTerminal(
+        string $accessToken,
+        string $terminalId,
+        array $terminal,
+    ): SmartTerminal {
+        return $this->apiClient->updateSmartTerminal($accessToken, $terminalId, $terminal);
+    }
+
+    /**
+     * Cancel the current action of a smart terminal.
+     */
+    public function cancelSmartTerminalAction(
+        string $accessToken,
+        string $terminalId,
+    ): void {
+        $this->apiClient->cancelSmartTerminalAction($accessToken, $terminalId);
+    }
+
+    /**
+     * Update an existing smart terminal MDM/app settings.
+     *
+     * @param array<string, mixed> $settings
+     */
+    public function updateSmartTerminalMdmSettings(
+        string $accessToken,
+        string $terminalId,
+        array $settings,
+    ): SmartTerminalMdmSettings {
+        return $this->apiClient->updateSmartTerminalMdmSettings($accessToken, $terminalId, $settings);
+    }
+
+    /**
+     * Get the MDM and App settings for a smart terminal.
+     */
+    public function getSmartTerminalMdmSettings(
+        string $accessToken,
+        string $terminalId,
+    ): SmartTerminalMdmSettings {
+        return $this->apiClient->getSmartTerminalMdmSettings($accessToken, $terminalId);
+    }
+
+    /**
+     * Reboot a smart terminal.
+     */
+    public function rebootSmartTerminal(
+        string $accessToken,
+        string $terminalId,
+    ): void {
+        $this->apiClient->rebootSmartTerminal($accessToken, $terminalId);
+    }
+
+    /**
+     * Get the connection status of a smart terminal.
+     */
+    public function getSmartTerminalConnectionStatus(
+        string $accessToken,
+        string $terminalId,
+    ): SmartTerminalConnectionStatus {
+        return $this->apiClient->getSmartTerminalConnectionStatus($accessToken, $terminalId);
+    }
+
+    /**
+     * Get an existing internal terminal.
+     */
+    public function getInternalTerminal(
+        string $accessToken,
+        string $terminalId,
+    ): InternalTerminal {
+        return $this->apiClient->getInternalTerminal($accessToken, $terminalId);
+    }
+
+    /**
+     * Update an existing internal terminal.
+     *
+     * @param array<string, mixed> $terminal
+     */
+    public function updateInternalTerminal(
+        string $accessToken,
+        string $terminalId,
+        array $terminal,
+    ): InternalTerminal {
+        return $this->apiClient->updateInternalTerminal($accessToken, $terminalId, $terminal);
+    }
+
+    /**
+     * Get the connection status of an internal terminal.
+     */
+    public function getInternalTerminalConnectionStatus(
+        string $accessToken,
+        string $terminalId,
+    ): InternalTerminalConnectionStatus {
+        return $this->apiClient->getInternalTerminalConnectionStatus($accessToken, $terminalId);
+    }
+
+    /**
+     * Cancel the current WECR transaction of an internal terminal.
+     */
+    public function cancelInternalTerminalAction(
+        string $accessToken,
+        string $terminalId,
+    ): void {
+        $this->apiClient->cancelInternalTerminalAction($accessToken, $terminalId);
     }
 
     /**

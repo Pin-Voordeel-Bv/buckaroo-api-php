@@ -13,11 +13,17 @@ use PinVandaag\BuckarooAPI\Model\AccessToken;
 use PinVandaag\BuckarooAPI\Model\ApiKey;
 use PinVandaag\BuckarooAPI\Model\Customer;
 use PinVandaag\BuckarooAPI\Model\CustomerSearchResult;
+use PinVandaag\BuckarooAPI\Model\InternalTerminal;
+use PinVandaag\BuckarooAPI\Model\InternalTerminalConnectionStatus;
 use PinVandaag\BuckarooAPI\Model\Merchant;
 use PinVandaag\BuckarooAPI\Model\MerchantFeatures;
 use PinVandaag\BuckarooAPI\Model\MerchantLegalEntity;
 use PinVandaag\BuckarooAPI\Model\Store;
 use PinVandaag\BuckarooAPI\Model\StoreSearchResult;
+use PinVandaag\BuckarooAPI\Model\SmartTerminal;
+use PinVandaag\BuckarooAPI\Model\SmartTerminalConnectionStatus;
+use PinVandaag\BuckarooAPI\Model\SmartTerminalMdmSettings;
+use PinVandaag\BuckarooAPI\Model\TerminalSearchResult;
 use PinVandaag\BuckarooAPI\Model\TransactionSearchResult;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Http\Message\ResponseInterface;
@@ -351,6 +357,301 @@ final class APIClient
     }
 
     /**
+     * Search filtered POS terminals.
+     *
+     * @param array<string, mixed> $filters
+     *
+     * @throws BuckarooAPIException
+     */
+    public function searchTerminals(
+        string $accessToken,
+        array $filters = [],
+    ): TerminalSearchResult {
+        $filters['limit'] ??= 100;
+
+        /** @var TerminalSearchResult $terminals */
+        $terminals = $this->postHalSearch(
+            endpoint: '/v1/pos/terminals/search',
+            accessToken: $accessToken,
+            filters: $filters,
+            responseClass: TerminalSearchResult::class,
+            actionDescription: 'search Buckaroo POS terminals',
+        );
+
+        return $terminals;
+    }
+
+    /**
+     * Get an existing smart terminal.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getSmartTerminal(
+        string $accessToken,
+        string $terminalId,
+    ): SmartTerminal {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo smart terminal request requires a terminalId.');
+        }
+
+        /** @var SmartTerminal $terminal */
+        $terminal = $this->getHal(
+            endpoint: sprintf('/v1/pos/terminals/smart/%s', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            responseClass: SmartTerminal::class,
+            actionDescription: sprintf('get Buckaroo smart terminal "%s"', $terminalId),
+        );
+
+        return $terminal;
+    }
+
+    /**
+     * Update an existing smart terminal.
+     *
+     * @param array<string, mixed> $terminal
+     *
+     * @throws BuckarooAPIException
+     */
+    public function updateSmartTerminal(
+        string $accessToken,
+        string $terminalId,
+        array $terminal,
+    ): SmartTerminal {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo smart terminal update requires a terminalId.');
+        }
+
+        $payload = $this->filterPayload($terminal);
+
+        /** @var SmartTerminal $updatedTerminal */
+        $updatedTerminal = $this->patchHal(
+            endpoint: sprintf('/v1/pos/terminals/smart/%s', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            payload: $payload,
+            responseClass: SmartTerminal::class,
+            actionDescription: sprintf('update Buckaroo smart terminal "%s"', $terminalId),
+        );
+
+        return $updatedTerminal;
+    }
+
+    /**
+     * Cancel the current action of a smart terminal.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function cancelSmartTerminalAction(
+        string $accessToken,
+        string $terminalId,
+    ): void {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo smart terminal cancel requires a terminalId.');
+        }
+
+        $this->postHalNoContent(
+            endpoint: sprintf('/v1/pos/terminals/smart/%s/cancel', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            actionDescription: sprintf('cancel current action for Buckaroo smart terminal "%s"', $terminalId),
+        );
+    }
+
+    /**
+     * Update an existing smart terminal MDM/app settings.
+     *
+     * @param array<string, mixed> $settings
+     *
+     * @throws BuckarooAPIException
+     */
+    public function updateSmartTerminalMdmSettings(
+        string $accessToken,
+        string $terminalId,
+        array $settings,
+    ): SmartTerminalMdmSettings {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo smart terminal MDM update requires a terminalId.');
+        }
+
+        $payload = $this->filterPayload($settings);
+
+        /** @var SmartTerminalMdmSettings $updatedSettings */
+        $updatedSettings = $this->patchHal(
+            endpoint: sprintf('/v1/pos/terminals/smart/%s/mdm', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            payload: $payload,
+            responseClass: SmartTerminalMdmSettings::class,
+            actionDescription: sprintf('update Buckaroo smart terminal "%s" MDM settings', $terminalId),
+        );
+
+        return $updatedSettings;
+    }
+
+    /**
+     * Get the MDM and App settings for a smart terminal.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getSmartTerminalMdmSettings(
+        string $accessToken,
+        string $terminalId,
+    ): SmartTerminalMdmSettings {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo smart terminal MDM settings request requires a terminalId.');
+        }
+
+        /** @var SmartTerminalMdmSettings $settings */
+        $settings = $this->getHal(
+            endpoint: sprintf('/v1/pos/terminals/smart/%s/mdm', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            responseClass: SmartTerminalMdmSettings::class,
+            actionDescription: sprintf('get Buckaroo smart terminal "%s" MDM settings', $terminalId),
+        );
+
+        return $settings;
+    }
+
+    /**
+     * Reboot a smart terminal.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function rebootSmartTerminal(
+        string $accessToken,
+        string $terminalId,
+    ): void {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo smart terminal reboot requires a terminalId.');
+        }
+
+        $this->postHalNoContent(
+            endpoint: sprintf('/v1/pos/terminals/smart/%s/reboot', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            actionDescription: sprintf('reboot Buckaroo smart terminal "%s"', $terminalId),
+        );
+    }
+
+    /**
+     * Get the connection status of a smart terminal.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getSmartTerminalConnectionStatus(
+        string $accessToken,
+        string $terminalId,
+    ): SmartTerminalConnectionStatus {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo smart terminal status request requires a terminalId.');
+        }
+
+        /** @var SmartTerminalConnectionStatus $status */
+        $status = $this->getHal(
+            endpoint: sprintf('/v1/pos/terminals/smart/%s/status', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            responseClass: SmartTerminalConnectionStatus::class,
+            actionDescription: sprintf('get Buckaroo smart terminal "%s" connection status', $terminalId),
+        );
+
+        return $status;
+    }
+
+    /**
+     * Get an existing internal terminal.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getInternalTerminal(
+        string $accessToken,
+        string $terminalId,
+    ): InternalTerminal {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo internal terminal request requires a terminalId.');
+        }
+
+        /** @var InternalTerminal $terminal */
+        $terminal = $this->getHal(
+            endpoint: sprintf('/v1/pos/terminals/internal/%s', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            responseClass: InternalTerminal::class,
+            actionDescription: sprintf('get Buckaroo internal terminal "%s"', $terminalId),
+        );
+
+        return $terminal;
+    }
+
+    /**
+     * Update an existing internal terminal.
+     *
+     * @param array<string, mixed> $terminal
+     *
+     * @throws BuckarooAPIException
+     */
+    public function updateInternalTerminal(
+        string $accessToken,
+        string $terminalId,
+        array $terminal,
+    ): InternalTerminal {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo internal terminal update requires a terminalId.');
+        }
+
+        $payload = $this->filterPayload($terminal);
+
+        /** @var InternalTerminal $updatedTerminal */
+        $updatedTerminal = $this->patchHal(
+            endpoint: sprintf('/v1/pos/terminals/internal/%s', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            payload: $payload,
+            responseClass: InternalTerminal::class,
+            actionDescription: sprintf('update Buckaroo internal terminal "%s"', $terminalId),
+        );
+
+        return $updatedTerminal;
+    }
+
+    /**
+     * Get the connection status of an internal terminal.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getInternalTerminalConnectionStatus(
+        string $accessToken,
+        string $terminalId,
+    ): InternalTerminalConnectionStatus {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo internal terminal status request requires a terminalId.');
+        }
+
+        /** @var InternalTerminalConnectionStatus $status */
+        $status = $this->getHal(
+            endpoint: sprintf('/v1/pos/terminals/internal/%s/status', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            responseClass: InternalTerminalConnectionStatus::class,
+            actionDescription: sprintf('get Buckaroo internal terminal "%s" connection status', $terminalId),
+        );
+
+        return $status;
+    }
+
+    /**
+     * Cancel the current WECR transaction of an internal terminal.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function cancelInternalTerminalAction(
+        string $accessToken,
+        string $terminalId,
+    ): void {
+        if ($terminalId === '') {
+            throw new BuckarooAPIException('Buckaroo internal terminal cancel requires a terminalId.');
+        }
+
+        $this->postHalNoContent(
+            endpoint: sprintf('/v1/pos/terminals/internal/%s/cancel', rawurlencode($terminalId)),
+            accessToken: $accessToken,
+            actionDescription: sprintf('cancel current WECR transaction for Buckaroo internal terminal "%s"', $terminalId),
+        );
+    }
+
+    /**
      * Search Buckaroo sales transactions using an API key.
      *
      * @param array<string, mixed> $filters
@@ -484,6 +785,38 @@ final class APIClient
         );
 
         return $updatedStore;
+    }
+
+    /**
+     * POST HAL endpoint without response payload.
+     *
+     * @throws BuckarooAPIException
+     */
+    private function postHalNoContent(
+        string $endpoint,
+        string $accessToken,
+        string $actionDescription,
+    ): void {
+        $response = $this->requestHal(
+            method: 'POST',
+            endpoint: $endpoint,
+            options: [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $accessToken,
+                    'Accept' => 'application/hal+json',
+                ],
+            ],
+            actionDescription: $actionDescription,
+        );
+
+        $statusCode = $response->getStatusCode();
+
+        if ($statusCode !== 204 && ($statusCode < 200 || $statusCode >= 300)) {
+            throw new BuckarooAPIException(
+                sprintf('Buckaroo request to %s failed with HTTP %d.', $endpoint, $statusCode),
+                $statusCode
+            );
+        }
     }
 
     /**
