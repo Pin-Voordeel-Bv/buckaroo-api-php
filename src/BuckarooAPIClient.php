@@ -98,6 +98,26 @@ final class BuckarooAPIClient
     }
 
     /**
+     * Get an existing customer.
+     */
+    public function getCustomer(
+        string $accessToken,
+        string $id,
+    ): Customer {
+        return $this->apiClient->getCustomer($accessToken, $id);
+    }
+
+    /**
+     * Delete an existing customer.
+     */
+    public function deleteCustomer(
+        string $accessToken,
+        string $id,
+    ): void {
+        $this->apiClient->deleteCustomer($accessToken, $id);
+    }
+
+    /**
      * Get merchant details.
      */
     public function getMerchant(

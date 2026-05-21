@@ -228,6 +228,42 @@ final class APIClient
     }
 
     /**
+     * Get an existing customer.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getCustomer(
+        string $accessToken,
+        string $id,
+    ): Customer {
+        /** @var Customer $customer */
+        $customer = $this->getHal(
+            endpoint: sprintf('/v1/customers/%s', rawurlencode($id)),
+            accessToken: $accessToken,
+            responseClass: Customer::class,
+            actionDescription: sprintf('get Buckaroo customer "%s"', $id),
+        );
+
+        return $customer;
+    }
+
+    /**
+     * Delete an existing customer.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function deleteCustomer(
+        string $accessToken,
+        string $id,
+    ): void {
+        $this->deleteHal(
+            endpoint: sprintf('/v1/customers/%s', rawurlencode($id)),
+            accessToken: $accessToken,
+            actionDescription: sprintf('delete Buckaroo customer "%s"', $id),
+        );
+    }
+
+    /**
      * Get merchant details.
      *
      * @throws BuckarooAPIException
@@ -488,6 +524,39 @@ final class APIClient
         }
 
         return $result;
+    }
+
+    /**
+     * @throws BuckarooAPIException
+     */
+    private function deleteHal(
+        string $endpoint,
+        string $accessToken,
+        string $actionDescription,
+    ): void {
+        try {
+            $response = $this->client->request(
+                'DELETE',
+                $this->uri($endpoint),
+                [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $accessToken,
+                        'Accept' => 'application/hal+json',
+                    ],
+                ],
+            );
+        } catch (Throwable $exception) {
+            throw new BuckarooAPIException(sprintf('Could not %s.', $actionDescription), 0, $exception);
+        }
+
+        $statusCode = $response->getStatusCode();
+
+        if ($statusCode !== 204 && ($statusCode < 200 || $statusCode >= 300)) {
+            throw new BuckarooAPIException(
+                sprintf('Buckaroo request to %s failed with HTTP %d.', $endpoint, $statusCode),
+                $statusCode
+            );
+        }
     }
 
     /**
