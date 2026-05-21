@@ -7,6 +7,9 @@ namespace PinVandaag\BuckarooAPI;
 use GuzzleHttp\Client;
 use PinVandaag\BuckarooAPI\Client\APIClient;
 use PinVandaag\BuckarooAPI\Model\AccessToken;
+use PinVandaag\BuckarooAPI\Model\ApiKey;
+use PinVandaag\BuckarooAPI\Model\CustomerSearchResult;
+use PinVandaag\BuckarooAPI\Model\TransactionSearchResult;
 use Psr\Log\LoggerInterface;
 use SensitiveParameter;
 
@@ -61,9 +64,21 @@ final class BuckarooAPIClient
     public function createApiKey(
         AccessToken|string $accessToken,
         string $name,
-        string|array $scopes,
+        string|array $scopes = "sale:read sale:write transaction:read",
     ): ApiKey {
         return $this->apiClient->createApiKey($accessToken, $name, $scopes);
+    }
+
+    /**
+     * Search customers.
+     *
+     * @param array<string, mixed> $filters
+     */
+    public function searchCustomers(
+        string $accessToken,
+        array $filters = [],
+    ): CustomerSearchResult {
+        return $this->apiClient->searchCustomers($accessToken, $filters);
     }
 
     /**
@@ -72,9 +87,9 @@ final class BuckarooAPIClient
      * @param array<string, mixed> $filters
      */
     public function searchTransactions(
-        string $apiKey,
+        string $accessToken,
         array $filters = [],
     ): TransactionSearchResult {
-        return $this->apiClient->searchTransactions($apiKey, $filters);
+        return $this->apiClient->searchTransactions($accessToken, $filters);
     }
 }

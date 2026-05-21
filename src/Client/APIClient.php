@@ -10,6 +10,8 @@ use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use PinVandaag\BuckarooAPI\Exception\BuckarooAPIException;
 use PinVandaag\BuckarooAPI\Model\AccessToken;
+use PinVandaag\BuckarooAPI\Model\ApiKey;
+use PinVandaag\BuckarooAPI\Model\CustomerSearchResult;
 use PinVandaag\BuckarooAPI\Model\TransactionSearchResult;
 use Psr\Log\LoggerAwareTrait;
 use SensitiveParameter;
@@ -19,6 +21,7 @@ use Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Throwable;
 
 final class APIClient
 {
@@ -169,6 +172,51 @@ final class APIClient
     }
 
     /**
+     * Search Buckaroo customers.
+     *
+     * @param array<string, mixed> $filters
+     *
+     * @throws BuckarooAPIException
+     */
+    public function searchCustomers(
+        string $accessToken,
+        array $filters = [],
+    ): CustomerSearchResult {
+        $payload = array_filter(
+            $filters,
+            static fn (mixed $value): bool => $value !== null && $value !== []
+        );
+
+        try {
+            $response = $this->client->request(
+                'POST',
+                $this->uri('/v1/customers/search'),
+                [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $accessToken,
+                        'Accept' => 'application/hal+json',
+                        'Content-Type' => 'application/json',
+                    ],
+                    'body' => $this->serializer->serialize($payload, 'json'),
+                ],
+            );
+        } catch (Throwable $exception) {
+            throw new BuckarooAPIException('Could not search Buckaroo customers.', 0, $exception);
+        }
+
+        $body = (string) $response->getBody();
+
+        try {
+            /** @var CustomerSearchResult $result */
+            $result = $this->serializer->deserialize($body, CustomerSearchResult::class, 'json');
+        } catch (SerializerException $exception) {
+            throw new BuckarooAPIException('Could not deserialize Buckaroo customer search response.', 0, $exception);
+        }
+
+        return $result;
+    }
+
+    /**
      * Search Buckaroo sales transactions using an API key.
      *
      * @param array<string, mixed> $filters
@@ -176,7 +224,7 @@ final class APIClient
      * @throws BuckarooAPIException
      */
     public function searchTransactions(
-        string $apiKey,
+        string $accessToken,
         array $filters = [],
     ): TransactionSearchResult {
         $payload = array_filter(
@@ -194,7 +242,7 @@ final class APIClient
                 $this->uri('/v1/sales/transactions/search'),
                 [
                     'headers' => [
-                        'Buck-Api-Key' => $apiKey,
+                        'Authorization' => 'Bearer ' . $accessToken,
                         'Accept' => 'application/hal+json',
                         'Content-Type' => 'application/json',
                     ],
