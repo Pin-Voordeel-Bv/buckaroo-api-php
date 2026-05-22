@@ -36,6 +36,8 @@ use PinVandaag\BuckarooAPI\Model\PayoutSearchResult;
 use PinVandaag\BuckarooAPI\Model\Payout;
 use PinVandaag\BuckarooAPI\Model\Sale;
 use PinVandaag\BuckarooAPI\Model\SaleSearchResult;
+use PinVandaag\BuckarooAPI\Model\ServiceSubscription;
+use PinVandaag\BuckarooAPI\Model\ServiceSubscriptionSearchResult;
 use PinVandaag\BuckarooAPI\Model\Store;
 use PinVandaag\BuckarooAPI\Model\StoreSearchResult;
 use PinVandaag\BuckarooAPI\Model\SmartTerminal;
@@ -1433,6 +1435,120 @@ final class APIClient
             ],
             responseClass: GlobalSearchResult::class,
             actionDescription: 'perform Buckaroo global search',
+        );
+
+        return $result;
+    }
+
+    /**
+     * Search service subscriptions.
+     *
+     * @param array<string, mixed> $filters
+     *
+     * @throws BuckarooAPIException
+     */
+    public function searchServiceSubscriptions(
+        string $accessToken,
+        array $filters = [],
+    ): ServiceSubscriptionSearchResult {
+        /** @var ServiceSubscriptionSearchResult $result */
+        $result = $this->postHalSearch(
+            endpoint: '/v1/services/subscriptions/search',
+            accessToken: $accessToken,
+            filters: $filters,
+            responseClass: ServiceSubscriptionSearchResult::class,
+            actionDescription: 'search Buckaroo service subscriptions',
+        );
+
+        return $result;
+    }
+
+    /**
+     * Get a specific service subscription by id.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getServiceSubscription(
+        string $accessToken,
+        string $id,
+    ): ServiceSubscription {
+        if ($id === '') {
+            throw new BuckarooAPIException('Buckaroo service subscription request requires an id.');
+        }
+
+        /** @var ServiceSubscription $subscription */
+        $subscription = $this->getHal(
+            endpoint: sprintf('/v1/services/subscriptions/%s', rawurlencode($id)),
+            accessToken: $accessToken,
+            responseClass: ServiceSubscription::class,
+            actionDescription: sprintf('get Buckaroo service subscription "%s"', $id),
+        );
+
+        return $subscription;
+    }
+
+    /**
+     * Activate or deactivate service subscription.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function updateServiceSubscription(
+        string $accessToken,
+        string $id,
+        string $action,
+    ): ServiceSubscription {
+        if ($id === '') {
+            throw new BuckarooAPIException('Buckaroo service subscription update requires an id.');
+        }
+
+        if ($action === '') {
+            throw new BuckarooAPIException('Buckaroo service subscription update requires an action.');
+        }
+
+        /** @var ServiceSubscription $subscription */
+        $subscription = $this->patchHal(
+            endpoint: sprintf('/v1/services/subscriptions/%s', rawurlencode($id)),
+            accessToken: $accessToken,
+            payload: [
+                'action' => $action,
+            ],
+            responseClass: ServiceSubscription::class,
+            actionDescription: sprintf('update Buckaroo service subscription "%s"', $id),
+        );
+
+        return $subscription;
+    }
+
+    /**
+     * Reprioritise service subscriptions.
+     *
+     * @param array<int, string> $orderedSubscriptionIds
+     *
+     * @throws BuckarooAPIException
+     */
+    public function reprioritiseServiceSubscriptions(
+        string $accessToken,
+        string $code,
+        array $orderedSubscriptionIds,
+    ): ServiceSubscriptionSearchResult {
+        if ($code === '') {
+            throw new BuckarooAPIException('Buckaroo service subscription reprioritise requires a code.');
+        }
+
+        if ($orderedSubscriptionIds === []) {
+            throw new BuckarooAPIException('Buckaroo service subscription reprioritise requires orderedSubscriptionIds.');
+        }
+
+        /** @var ServiceSubscriptionSearchResult $result */
+        $result = $this->patchHal(
+            endpoint: '/v1/services/subscriptions/reprioritise',
+            accessToken: $accessToken,
+            payload: [
+                'code' => $code,
+                'orderedSubscriptionIds' => array_values($orderedSubscriptionIds),
+            ],
+            responseClass: ServiceSubscriptionSearchResult::class,
+            actionDescription: sprintf('reprioritise Buckaroo service subscriptions for "%s"', $code),
         );
 
         return $result;

@@ -33,6 +33,8 @@ use PinVandaag\BuckarooAPI\Model\PayoutSearchResult;
 use PinVandaag\BuckarooAPI\Model\Payout;
 use PinVandaag\BuckarooAPI\Model\Sale;
 use PinVandaag\BuckarooAPI\Model\SaleSearchResult;
+use PinVandaag\BuckarooAPI\Model\ServiceSubscription;
+use PinVandaag\BuckarooAPI\Model\ServiceSubscriptionSearchResult;
 use PinVandaag\BuckarooAPI\Model\Store;
 use PinVandaag\BuckarooAPI\Model\StoreSearchResult;
 use PinVandaag\BuckarooAPI\Model\SmartTerminal;
@@ -574,7 +576,7 @@ final class BuckarooAPIClient
     }
 
     /**
-     * Search sales transactions using a stored API key.
+     * Search sales transactions.
      *
      * @param array<string, mixed> $filters
      */
@@ -635,6 +637,52 @@ final class BuckarooAPIClient
         int $limit = 100,
     ): GlobalSearchResult {
         return $this->apiClient->search($accessToken, $needle, $resourceType, $limit);
+    }
+
+    /**
+     * Search service subscriptions.
+     *
+     * @param array<string, mixed> $filters
+     */
+    public function searchServiceSubscriptions(
+        string $accessToken,
+        array $filters = [],
+    ): ServiceSubscriptionSearchResult {
+        return $this->apiClient->searchServiceSubscriptions($accessToken, $filters);
+    }
+
+    /**
+     * Get a specific service subscription by id.
+     */
+    public function getServiceSubscription(
+        string $accessToken,
+        string $id,
+    ): ServiceSubscription {
+        return $this->apiClient->getServiceSubscription($accessToken, $id);
+    }
+
+    /**
+     * Activate or deactivate service subscription.
+     */
+    public function updateServiceSubscription(
+        string $accessToken,
+        string $id,
+        string $action,
+    ): ServiceSubscription {
+        return $this->apiClient->updateServiceSubscription($accessToken, $id, $action);
+    }
+
+    /**
+     * Reprioritise service subscriptions.
+     *
+     * @param array<int, string> $orderedSubscriptionIds
+     */
+    public function reprioritiseServiceSubscriptions(
+        string $accessToken,
+        string $code,
+        array $orderedSubscriptionIds,
+    ): ServiceSubscriptionSearchResult {
+        return $this->apiClient->reprioritiseServiceSubscriptions($accessToken, $code, $orderedSubscriptionIds);
     }
 
     /**
