@@ -24,6 +24,7 @@ use PinVandaag\BuckarooAPI\Model\SmartTerminal;
 use PinVandaag\BuckarooAPI\Model\SmartTerminalConnectionStatus;
 use PinVandaag\BuckarooAPI\Model\SmartTerminalMdmSettings;
 use PinVandaag\BuckarooAPI\Model\TerminalSearchResult;
+use PinVandaag\BuckarooAPI\Model\Transaction;
 use PinVandaag\BuckarooAPI\Model\TransactionSearchResult;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Http\Message\ResponseInterface;
@@ -674,6 +675,30 @@ final class APIClient
         );
 
         return $result;
+    }
+
+    /**
+     * Retrieve a transaction.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getTransaction(
+        string $accessToken,
+        string $id,
+    ): Transaction {
+        if ($id === '') {
+            throw new BuckarooAPIException('Buckaroo transaction request requires an id.');
+        }
+
+        /** @var Transaction $transaction */
+        $transaction = $this->getHal(
+            endpoint: sprintf('/v1/sales/transactions/%s', rawurlencode($id)),
+            accessToken: $accessToken,
+            responseClass: Transaction::class,
+            actionDescription: sprintf('get Buckaroo transaction "%s"', $id),
+        );
+
+        return $transaction;
     }
 
     /**

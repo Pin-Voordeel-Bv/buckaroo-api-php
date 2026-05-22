@@ -21,6 +21,7 @@ use PinVandaag\BuckarooAPI\Model\SmartTerminal;
 use PinVandaag\BuckarooAPI\Model\SmartTerminalConnectionStatus;
 use PinVandaag\BuckarooAPI\Model\SmartTerminalMdmSettings;
 use PinVandaag\BuckarooAPI\Model\TerminalSearchResult;
+use PinVandaag\BuckarooAPI\Model\Transaction;
 use PinVandaag\BuckarooAPI\Model\TransactionSearchResult;
 use Psr\Log\LoggerInterface;
 use SensitiveParameter;
@@ -304,6 +305,16 @@ final class BuckarooAPIClient
         array $filters = [],
     ): TransactionSearchResult {
         return $this->apiClient->searchTransactions($accessToken, $filters);
+    }
+
+    /**
+     * Retrieve a transaction.
+     */
+    public function getTransaction(
+        string $accessToken,
+        string $id,
+    ): Transaction {
+        return $this->apiClient->getTransaction($accessToken, $id);
     }
 
     /**
