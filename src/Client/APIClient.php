@@ -18,6 +18,8 @@ use PinVandaag\BuckarooAPI\Model\InternalTerminalConnectionStatus;
 use PinVandaag\BuckarooAPI\Model\Merchant;
 use PinVandaag\BuckarooAPI\Model\MerchantFeatures;
 use PinVandaag\BuckarooAPI\Model\MerchantLegalEntity;
+use PinVandaag\BuckarooAPI\Model\Sale;
+use PinVandaag\BuckarooAPI\Model\SaleSearchResult;
 use PinVandaag\BuckarooAPI\Model\Store;
 use PinVandaag\BuckarooAPI\Model\StoreSearchResult;
 use PinVandaag\BuckarooAPI\Model\SmartTerminal;
@@ -653,7 +655,63 @@ final class APIClient
     }
 
     /**
-     * Search Buckaroo sales transactions using an API key.
+     * Create a sale.
+     *
+     * @param array<string, mixed> $sale
+     *
+     * @throws BuckarooAPIException
+     */
+    public function createSale(
+        string $accessToken,
+        array $sale,
+    ): Sale {
+        $payload = $this->filterPayload($sale);
+
+        foreach (['reference', 'currency', 'totalAmount', 'sequenceType', 'intentType'] as $requiredField) {
+            if (($payload[$requiredField] ?? null) === null || $payload[$requiredField] === '') {
+                throw new BuckarooAPIException(sprintf('Buckaroo sale payload requires "%s".', $requiredField));
+            }
+        }
+
+        /** @var Sale $createdSale */
+        $createdSale = $this->postHalSearch(
+            endpoint: '/v1/sales',
+            accessToken: $accessToken,
+            filters: $payload,
+            responseClass: Sale::class,
+            actionDescription: 'create Buckaroo sale',
+        );
+
+        return $createdSale;
+    }
+
+    /**
+     * Search sales.
+     *
+     * @param array<string, mixed> $filters
+     *
+     * @throws BuckarooAPIException
+     */
+    public function searchSales(
+        string $accessToken,
+        array $filters = [],
+    ): SaleSearchResult {
+        $filters['limit'] ??= 100;
+
+        /** @var SaleSearchResult $result */
+        $result = $this->postHalSearch(
+            endpoint: '/v1/sales/search',
+            accessToken: $accessToken,
+            filters: $filters,
+            responseClass: SaleSearchResult::class,
+            actionDescription: 'search Buckaroo sales',
+        );
+
+        return $result;
+    }
+
+    /**
+     * Search Buckaroo sales transactions.
      *
      * @param array<string, mixed> $filters
      *
@@ -699,6 +757,79 @@ final class APIClient
         );
 
         return $transaction;
+    }
+
+    /**
+     * Retrieve a sale.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getSale(
+        string $accessToken,
+        string $saleId,
+    ): Sale {
+        if ($saleId === '') {
+            throw new BuckarooAPIException('Buckaroo sale request requires a saleId.');
+        }
+
+        /** @var Sale $sale */
+        $sale = $this->getHal(
+            endpoint: sprintf('/v1/sales/%s', rawurlencode($saleId)),
+            accessToken: $accessToken,
+            responseClass: Sale::class,
+            actionDescription: sprintf('get Buckaroo sale "%s"', $saleId),
+        );
+
+        return $sale;
+    }
+
+    /**
+     * Cancel a sale.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function cancelSale(
+        string $accessToken,
+        string $saleId,
+    ): Sale {
+        if ($saleId === '') {
+            throw new BuckarooAPIException('Buckaroo sale cancel request requires a saleId.');
+        }
+
+        /** @var Sale $sale */
+        $sale = $this->postHalSearch(
+            endpoint: sprintf('/v1/sales/%s/cancel', rawurlencode($saleId)),
+            accessToken: $accessToken,
+            filters: [],
+            responseClass: Sale::class,
+            actionDescription: sprintf('cancel Buckaroo sale "%s"', $saleId),
+        );
+
+        return $sale;
+    }
+
+    /**
+     * Retrieve a sale by reference.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function getSaleByReference(
+        string $accessToken,
+        string $reference,
+    ): Sale {
+        if ($reference === '') {
+            throw new BuckarooAPIException('Buckaroo sale reference request requires a reference.');
+        }
+
+        /** @var Sale $sale */
+        $sale = $this->getHal(
+            endpoint: sprintf('/v1/sales/reference/%s', rawurlencode($reference)),
+            accessToken: $accessToken,
+            responseClass: Sale::class,
+            actionDescription: sprintf('get Buckaroo sale by reference "%s"', $reference),
+        );
+
+        return $sale;
     }
 
     /**

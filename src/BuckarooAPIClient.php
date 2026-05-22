@@ -15,6 +15,8 @@ use PinVandaag\BuckarooAPI\Model\InternalTerminalConnectionStatus;
 use PinVandaag\BuckarooAPI\Model\Merchant;
 use PinVandaag\BuckarooAPI\Model\MerchantFeatures;
 use PinVandaag\BuckarooAPI\Model\MerchantLegalEntity;
+use PinVandaag\BuckarooAPI\Model\Sale;
+use PinVandaag\BuckarooAPI\Model\SaleSearchResult;
 use PinVandaag\BuckarooAPI\Model\Store;
 use PinVandaag\BuckarooAPI\Model\StoreSearchResult;
 use PinVandaag\BuckarooAPI\Model\SmartTerminal;
@@ -296,6 +298,30 @@ final class BuckarooAPIClient
     }
 
     /**
+     * Create a sale.
+     *
+     * @param array<string, mixed> $sale
+     */
+    public function createSale(
+        string $accessToken,
+        array $sale,
+    ): Sale {
+        return $this->apiClient->createSale($accessToken, $sale);
+    }
+
+    /**
+     * Search sales.
+     *
+     * @param array<string, mixed> $filters
+     */
+    public function searchSales(
+        string $accessToken,
+        array $filters = [],
+    ): SaleSearchResult {
+        return $this->apiClient->searchSales($accessToken, $filters);
+    }
+
+    /**
      * Search sales transactions using a stored API key.
      *
      * @param array<string, mixed> $filters
@@ -315,6 +341,36 @@ final class BuckarooAPIClient
         string $id,
     ): Transaction {
         return $this->apiClient->getTransaction($accessToken, $id);
+    }
+
+    /**
+     * Retrieve a sale.
+     */
+    public function getSale(
+        string $accessToken,
+        string $saleId,
+    ): Sale {
+        return $this->apiClient->getSale($accessToken, $saleId);
+    }
+
+    /**
+     * Cancel a sale.
+     */
+    public function cancelSale(
+        string $accessToken,
+        string $saleId,
+    ): Sale {
+        return $this->apiClient->cancelSale($accessToken, $saleId);
+    }
+
+    /**
+     * Retrieve a sale by reference.
+     */
+    public function getSaleByReference(
+        string $accessToken,
+        string $reference,
+    ): Sale {
+        return $this->apiClient->getSaleByReference($accessToken, $reference);
     }
 
     /**
