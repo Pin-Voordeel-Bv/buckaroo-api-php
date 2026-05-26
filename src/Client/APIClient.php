@@ -90,78 +90,6 @@ final class APIClient
     }
 
     /**
-     * Retrieve a JWT access token using the OAuth2 client_credentials flow.
-     *
-     * @param list<string>|string|null $scope Optional scope(s), separated by spaces in the request.
-     *
-     * @throws BuckarooAPIException
-     */
-    public function retrieveAccessToken(
-        string $clientId,
-        #[SensitiveParameter] string $clientSecret,
-        array|string|null $scope = null,
-    ): AccessToken {
-        $formParams = [
-            'grant_type' => 'client_credentials',
-        ];
-
-        if ($scope !== null && $scope !== []) {
-            $formParams['scope'] = is_array($scope) ? implode(' ', $scope) : $scope;
-        }
-
-        $startedAt = microtime(true);
-
-        try {
-            $response = $this->client->request('POST', $this->uri('/oauth/token'), [
-                'auth' => [$clientId, $clientSecret],
-                'headers' => [
-                    'Accept' => 'application/json',
-                ],
-                'form_params' => $formParams,
-                'connect_timeout' => 8.0,
-                'http_errors' => false,
-                'timeout' => 25.0,
-                'verify' => true,
-            ]);
-        } catch (ConnectException $exception) {
-            $this->log('[Buckaroo] OAuth connect failed: ' . $exception->getMessage());
-            throw new BuckarooAPIException('Could not connect to Buckaroo OAuth endpoint.', 504, $exception);
-        } catch (RequestException $exception) {
-            $this->log('[Buckaroo] OAuth request failed: ' . $exception->getMessage());
-            throw new BuckarooAPIException('Buckaroo OAuth request failed.', (int) $exception->getCode(), $exception);
-        } catch (GuzzleException $exception) {
-            $this->log('[Buckaroo] OAuth HTTP client failed: ' . $exception->getMessage());
-            throw new BuckarooAPIException($exception->getMessage(), (int) $exception->getCode(), $exception);
-        }
-
-        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
-        $statusCode = $response->getStatusCode();
-        $body = (string) $response->getBody();
-
-        $this->log(sprintf('[Buckaroo] POST /oauth/token -> HTTP %d in %dms', $statusCode, $durationMs));
-
-        if ($statusCode < 200 || $statusCode >= 300) {
-            throw new BuckarooAPIException(
-                $this->errorMessageFromResponseBody($body, 'retrieve Buckaroo OAuth token', $statusCode),
-                $statusCode,
-            );
-        }
-
-        try {
-            /** @var AccessToken $accessToken */
-            $accessToken = $this->serializer->deserialize($body, AccessToken::class, 'json');
-        } catch (SerializerException $exception) {
-            throw new BuckarooAPIException('Could not deserialize Buckaroo OAuth token response.', 0, $exception);
-        }
-
-        if ($accessToken->accessToken === '') {
-            throw new BuckarooAPIException('Buckaroo OAuth token response did not contain an access_token.');
-        }
-
-        return $accessToken;
-    }
-
-    /**
      * Create a long-lived Buckaroo API key using an OAuth access token.
      *
      * @throws BuckarooAPIException
@@ -777,6 +705,148 @@ final class APIClient
         );
 
         return $legalEntity;
+    }
+
+    /**
+     * Retrieve a JWT access token using the OAuth2 client_credentials flow.
+     *
+     * @param list<string>|string|null $scope Optional scope(s), separated by spaces in the request.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function retrieveAccessToken(
+        string $clientId,
+        #[SensitiveParameter] string $clientSecret,
+        array|string|null $scope = null,
+    ): AccessToken {
+        $formParams = [
+            'grant_type' => 'client_credentials',
+        ];
+
+        if ($scope !== null && $scope !== []) {
+            $formParams['scope'] = is_array($scope) ? implode(' ', $scope) : $scope;
+        }
+
+        $startedAt = microtime(true);
+
+        try {
+            $response = $this->client->request('POST', $this->uri('/oauth/token'), [
+                'auth' => [$clientId, $clientSecret],
+                'headers' => [
+                    'Accept' => 'application/json',
+                ],
+                'form_params' => $formParams,
+                'connect_timeout' => 8.0,
+                'http_errors' => false,
+                'timeout' => 25.0,
+                'verify' => true,
+            ]);
+        } catch (ConnectException $exception) {
+            $this->log('[Buckaroo] OAuth connect failed: ' . $exception->getMessage());
+            throw new BuckarooAPIException('Could not connect to Buckaroo OAuth endpoint.', 504, $exception);
+        } catch (RequestException $exception) {
+            $this->log('[Buckaroo] OAuth request failed: ' . $exception->getMessage());
+            throw new BuckarooAPIException('Buckaroo OAuth request failed.', (int) $exception->getCode(), $exception);
+        } catch (GuzzleException $exception) {
+            $this->log('[Buckaroo] OAuth HTTP client failed: ' . $exception->getMessage());
+            throw new BuckarooAPIException($exception->getMessage(), (int) $exception->getCode(), $exception);
+        }
+
+        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $statusCode = $response->getStatusCode();
+        $body = (string) $response->getBody();
+
+        $this->log(sprintf('[Buckaroo] POST /oauth/token -> HTTP %d in %dms', $statusCode, $durationMs));
+
+        if ($statusCode < 200 || $statusCode >= 300) {
+            throw new BuckarooAPIException(
+                $this->errorMessageFromResponseBody($body, 'retrieve Buckaroo OAuth token', $statusCode),
+                $statusCode,
+            );
+        }
+
+        try {
+            /** @var AccessToken $accessToken */
+            $accessToken = $this->serializer->deserialize($body, AccessToken::class, 'json');
+        } catch (SerializerException $exception) {
+            throw new BuckarooAPIException('Could not deserialize Buckaroo OAuth token response.', 0, $exception);
+        }
+
+        if ($accessToken->accessToken === '') {
+            throw new BuckarooAPIException('Buckaroo OAuth token response did not contain an access_token.');
+        }
+
+        return $accessToken;
+    }
+
+    /**
+     * Convert a Zitadel token to a Buckaroo OAuth 2.0 access token.
+     *
+     * @throws BuckarooAPIException
+     */
+    public function convertZitadelToken(
+        string $merchantId,
+        ?string $zitadelToken = null,
+    ): AccessToken {
+        if ($merchantId === '') {
+            throw new BuckarooAPIException('Buckaroo OAuth convert requires merchant_id.');
+        }
+
+        $payload = [
+            'merchant_id' => $merchantId,
+            'zitadel_token' => $zitadelToken,
+        ];
+
+        $startedAt = microtime(true);
+
+        try {
+            $response = $this->client->request('POST', $this->uri('/oauth/convert'), [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ],
+                'body' => $this->serializer->serialize($this->filterPayload($payload), 'json'),
+                'connect_timeout' => 8.0,
+                'http_errors' => false,
+                'timeout' => 25.0,
+                'verify' => true,
+            ]);
+        } catch (ConnectException $exception) {
+            $this->log('[Buckaroo] OAuth convert connect failed: ' . $exception->getMessage());
+            throw new BuckarooAPIException('Could not connect to Buckaroo OAuth convert endpoint.', 504, $exception);
+        } catch (RequestException $exception) {
+            $this->log('[Buckaroo] OAuth convert request failed: ' . $exception->getMessage());
+            throw new BuckarooAPIException('Buckaroo OAuth convert request failed.', (int) $exception->getCode(), $exception);
+        } catch (GuzzleException $exception) {
+            $this->log('[Buckaroo] OAuth convert HTTP client failed: ' . $exception->getMessage());
+            throw new BuckarooAPIException($exception->getMessage(), (int) $exception->getCode(), $exception);
+        }
+
+        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $statusCode = $response->getStatusCode();
+        $body = (string) $response->getBody();
+
+        $this->log(sprintf('[Buckaroo] POST /oauth/convert -> HTTP %d in %dms', $statusCode, $durationMs));
+
+        if ($statusCode < 200 || $statusCode >= 300) {
+            throw new BuckarooAPIException(
+                $this->errorMessageFromResponseBody($body, 'convert Buckaroo Zitadel token', $statusCode),
+                $statusCode,
+            );
+        }
+
+        try {
+            /** @var AccessToken $accessToken */
+            $accessToken = $this->serializer->deserialize($body, AccessToken::class, 'json');
+        } catch (SerializerException $exception) {
+            throw new BuckarooAPIException('Could not deserialize Buckaroo OAuth convert response.', 0, $exception);
+        }
+
+        if ($accessToken->accessToken === '') {
+            throw new BuckarooAPIException('Buckaroo OAuth convert response did not contain an access_token.');
+        }
+
+        return $accessToken;
     }
 
     /**

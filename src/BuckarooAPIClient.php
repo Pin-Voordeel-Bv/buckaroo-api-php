@@ -88,18 +88,6 @@ final class BuckarooAPIClient
     }
 
     /**
-     * @param list<string>|string|null $scope
-     */
-    public function getAccessToken(array|string|null $scope = null): AccessToken
-    {
-        if ($this->clientId === null || $this->clientSecret === null) {
-            throw new \LogicException('Call configure() with a clientId and clientSecret before requesting a token.');
-        }
-
-        return $this->apiClient->retrieveAccessToken($this->clientId, $this->clientSecret, $scope);
-    }
-
-    /**
      * Create a long-lived API key with the given OAuth access token.
      */
     public function createApiKey(
@@ -356,6 +344,28 @@ final class BuckarooAPIClient
         string $accessToken,
     ): MerchantLegalEntity {
         return $this->apiClient->getMerchantLegalEntity($accessToken);
+    }
+
+    /**
+     * @param list<string>|string|null $scope
+     */
+    public function getAccessToken(array|string|null $scope = null): AccessToken
+    {
+        if ($this->clientId === null || $this->clientSecret === null) {
+            throw new \LogicException('Call configure() with a clientId and clientSecret before requesting a token.');
+        }
+
+        return $this->apiClient->retrieveAccessToken($this->clientId, $this->clientSecret, $scope);
+    }
+
+    /**
+     * Convert a Zitadel token to a Buckaroo OAuth 2.0 access token.
+     */
+    public function convertZitadelToken(
+        string $merchantId,
+        ?string $zitadelToken = null,
+    ): AccessToken {
+        return $this->apiClient->convertZitadelToken($merchantId, $zitadelToken);
     }
 
     /**
