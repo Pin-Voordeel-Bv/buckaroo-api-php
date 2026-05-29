@@ -1,5 +1,5 @@
 {
-    "name": "pinvandaag/buckaroo-api-php",
+    "name": "pinvandaag/my-buckaroo-api-php",
     "description": "A PHP wrapper for the My Buckaroo API",
     "license": "MIT",
     "type": "library",
